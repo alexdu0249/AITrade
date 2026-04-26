@@ -27,7 +27,7 @@ class AITraderApp {
         this.currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
 
         this.aiConversationHistory = [];
-        this.selectedAiModel = localStorage.getItem('selectedAiModel') || 'doubao-pro-32k';
+        this.selectedAiModel = localStorage.getItem('selectedAiModel') || 'doubao-seed-2-0-pro-260215';
 
         this.init();
         this.registerSW();
@@ -2302,9 +2302,9 @@ class AITraderApp {
         this.selectedAiModel = model;
         localStorage.setItem('selectedAiModel', model);
         const modelNames = {
-            'doubao-pro-32k': '豆包Pro 32K',
-            'doubao-pro-128k': '豆包Pro 128K',
-            'doubao-thinking-pro': '豆包思考Pro'
+            'doubao-seed-2-0-pro-260215': '豆包Pro 2.0',
+            'deepseek-v3-2-251201': 'DeepSeek V3.2',
+            'doubao-seed-2-0-lite-260215': '豆包Lite 2.0'
         };
         document.getElementById('currentModel').textContent = modelNames[model] || model;
         this.hideModelSelector();

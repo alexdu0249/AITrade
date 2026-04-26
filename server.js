@@ -553,9 +553,9 @@ function handleChatModelsRequest(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
 
     const models = [
-        { id: 'doubao-pro-32k', name: '豆包Pro 32K', description: '适合日常对话和投资分析，性价比高', contextWindow: 32000 },
-        { id: 'doubao-pro-128k', name: '豆包Pro 128K', description: '超长上下文，可分析年报、财报等长文档', contextWindow: 128000 },
-        { id: 'doubao-thinking-pro', name: '豆包思考Pro', description: '深度推理能力，适合复杂投资策略分析', contextWindow: 32000 }
+        { id: 'doubao-seed-2-0-pro-260215', name: '豆包Pro 2.0', description: '最新版本，适合深度投资分析', contextWindow: 32000 },
+        { id: 'deepseek-v3-2-251201', name: 'DeepSeek V3.2', description: '强大的推理能力，擅长复杂分析', contextWindow: 32000 },
+        { id: 'doubao-seed-2-0-lite-260215', name: '豆包Lite 2.0', description: '轻量版，响应速度快', contextWindow: 32000 }
     ];
 
     res.writeHead(200);

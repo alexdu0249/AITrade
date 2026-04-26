@@ -108,18 +108,62 @@ function saveChatHistory(userId, messages, assistantMessage, model) {
 
 function extractStockCodes(text) {
     if (!text) return [];
+    
+    const codes = [];
     const patterns = [
         /\b(60\d{3}|00\d{3}|30\d{3}|688\d{3})\b/g,
         /\b[A-Z]{1,5}\b/g,
     ];
     
-    const codes = [];
     for (const pattern of patterns) {
         const matches = text.match(pattern);
         if (matches) {
             codes.push(...matches);
         }
     }
+
+    const stockNames = {
+        '贵州茅台': ['600519', '茅台'],
+        '茅台': ['600519'],
+        '腾讯': ['00700', '0700', 'TCEHY'],
+        '阿里巴巴': ['09988', '9988', 'BABA'],
+        '阿里': ['09988', '9988', 'BABA'],
+        '美团': ['03690', '3690', 'MPNGF'],
+        '京东': ['09618', '9618', 'JD'],
+        '百度': ['09888', '9888', 'BIDU'],
+        '拼多多': ['PDD'],
+        '网易': ['09999', '9999', 'NTES'],
+        '小米': ['01810', '1810', 'XIACF'],
+        '比亚迪': ['002594', '2594', 'BYDDY'],
+        '比亚迪': ['1211', 'BYDDF'],
+        '宁德时代': ['300750', '750', 'CATL'],
+        '招商银行': ['600036', '36', 'CMB'],
+        '中国平安': ['601318', '1318', 'PNGAY'],
+        '五粮液': ['000858', '858'],
+        '中国石油': ['601857', '857', 'PTR'],
+        '工商银行': ['601398', '1398', 'IDCBF'],
+        '建设银行': ['601939', '939', 'CICHF'],
+        '农业银行': ['601288', '1288', 'ACGBF'],
+        '中国移动': ['600941', '941', 'CHL'],
+        '中国银行': ['601988', '988', 'BACHF'],
+        '中国人寿': ['601628', '628', 'LFC'],
+        '苹果': ['AAPL', 'Apple'],
+        '微软': ['MSFT', 'Microsoft'],
+        '谷歌': ['GOOGL', 'GOOG', 'Google'],
+        '亚马逊': ['AMZN', 'Amazon'],
+        '特斯拉': ['TSLA', 'Tesla'],
+        'Meta': ['META', 'Facebook'],
+        '英伟达': ['NVDA', 'NVIDIA'],
+        '台积电': ['TSM', 'TSMC']
+    };
+
+    for (const [name, nameCodes] of Object.entries(stockNames)) {
+        if (text.includes(name)) {
+            codes.push(...nameCodes);
+            codes.push(name);
+        }
+    }
+
     return [...new Set(codes)];
 }
 
@@ -133,17 +177,62 @@ function getChatHistory(userId, stockCode = null) {
     
     if (stockCode) {
         history = history.filter(chat => {
-            if (!chat.stockCodes || chat.stockCodes.length === 0) {
-                return chat.userMessage.toLowerCase().includes(stockCode.toLowerCase());
-            }
-            return chat.stockCodes.some(code => 
-                code.toLowerCase() === stockCode.toLowerCase() ||
-                chat.userMessage.toLowerCase().includes(code.toLowerCase())
+            const messageLower = chat.userMessage.toLowerCase();
+            const codeLower = stockCode.toLowerCase();
+            
+            const exactMatch = chat.stockCodes && chat.stockCodes.some(code => 
+                code.toLowerCase() === codeLower ||
+                code.toLowerCase() === stockCode.toLowerCase()
             );
+            
+            const textMatch = messageLower.includes(stockCode.toLowerCase());
+            
+            const nameMatch = isStockRelated(messageLower, stockCode);
+
+            return exactMatch || textMatch || nameMatch;
         });
     }
     
     return history.reverse().slice(0, 50);
+}
+
+function isStockRelated(message, stockCode) {
+    const stockNameMap = {
+        '600519': ['贵州茅台', '茅台'],
+        '00700': ['腾讯', '騰訊'],
+        '09988': ['阿里巴巴', '阿里', '阿里巴巴集团'],
+        '03690': ['美团'],
+        '09618': ['京东'],
+        '09888': ['百度'],
+        'PDD': ['拼多多'],
+        '09999': ['网易'],
+        '01810': ['小米'],
+        '002594': ['比亚迪'],
+        '300750': ['宁德时代'],
+        '600036': ['招商银行'],
+        '601318': ['中国平安'],
+        '000858': ['五粮液'],
+        '601857': ['中国石油'],
+        '601398': ['工商银行'],
+        '601939': ['建设银行'],
+        '601288': ['农业银行'],
+        '600941': ['中国移动'],
+        '601988': ['中国银行'],
+        '601628': ['中国人寿'],
+        'AAPL': ['apple', '苹果', '苹果公司'],
+        'MSFT': ['microsoft', '微软'],
+        'GOOGL': ['google', '谷歌', 'alphabet'],
+        'AMZN': ['amazon', '亚马逊'],
+        'TSLA': ['tesla', '特斯拉'],
+        'META': ['meta', 'facebook', '脸书'],
+        'NVDA': ['nvidia', '英伟达'],
+        'TSM': ['tsmc', '台积电', '台灣積體電路']
+    };
+
+    const names = stockNameMap[stockCode] || [];
+    const messageLower = message.toLowerCase();
+
+    return names.some(name => messageLower.includes(name.toLowerCase()));
 }
 
 function deleteChatHistory(userId, chatId) {
