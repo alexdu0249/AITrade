@@ -355,8 +355,8 @@ function handleUserRequest(req, res) {
             if (userData) {
                 res.writeHead(200);
                 res.end(JSON.stringify({
-                    watchlist: JSON.parse(userData.watchlist || '[]'),
-                    portfolio: JSON.parse(userData.portfolio || '[]')
+                    watchlist: userData.watchlist || [],
+                    portfolio: userData.portfolio || []
                 }));
             } else {
                 res.writeHead(404);
