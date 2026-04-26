@@ -26,6 +26,11 @@
                         <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
                     </svg>
                 </button>
+                <button class="header-btn ai-btn" id="aiChatBtn" aria-label="AI助手">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                </button>
             </div>
         </header>
 
@@ -254,6 +259,101 @@
                             <input type="password" id="registerPasswordConfirm" placeholder="请再次输入密码">
                         </div>
                         <button class="submit-btn" id="submitRegister">注册</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="ai-chat-panel" id="aiChatPanel">
+            <div class="ai-chat-header">
+                <div class="ai-header-info">
+                    <div class="ai-avatar">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                    </div>
+                    <div class="ai-title">
+                        <div class="ai-name">AI投资助手</div>
+                        <div class="ai-model" id="currentModel">豆包Pro 32K</div>
+                    </div>
+                </div>
+                <div class="ai-header-actions">
+                    <button class="ai-action-btn" id="switchModelBtn" title="切换模型">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                        </svg>
+                    </button>
+                    <button class="ai-action-btn" id="newChatBtn" title="新对话">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"/>
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                    </button>
+                    <button class="ai-action-btn" id="closeAiChat" title="关闭">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="ai-chat-messages" id="aiMessages">
+                <div class="ai-welcome">
+                    <div class="welcome-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                    </div>
+                    <h3>您好，我是AI投资助手</h3>
+                    <p>我可以帮您分析股票、解读财报、制定投资策略</p>
+                    <div class="suggestion-chips">
+                        <button class="suggestion-chip" data-prompt="帮我分析贵州茅台的财务状况和投资价值">分析贵州茅台</button>
+                        <button class="suggestion-chip" data-prompt="解释什么是市盈率(PE)和市净率(PB)">什么是PE和PB</button>
+                        <button class="suggestion-chip" data-prompt="帮我比较苹果公司和微软公司的投资价值">比较苹果和微软</button>
+                        <button class="suggestion-chip" data-prompt="分析当前A股市场的走势和热点板块">分析A股市场</button>
+                    </div>
+                </div>
+            </div>
+            <div class="ai-chat-input-area">
+                <div class="ai-input-wrapper">
+                    <textarea id="aiInput" placeholder="输入您的问题..." rows="1"></textarea>
+                    <button class="ai-send-btn" id="aiSendBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="22" y1="2" x2="11" y2="13"/>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="ai-input-hint">
+                    <span id="tokenCount">0</span> / 32000 tokens
+                </div>
+            </div>
+        </div>
+
+        <div class="ai-model-selector" id="modelSelector" hidden>
+            <div class="model-selector-header">
+                <h3>选择AI模型</h3>
+                <button class="close-model-selector" id="closeModelSelector">&times;</button>
+            </div>
+            <div class="model-list" id="modelList">
+                <div class="model-item" data-model="doubao-pro-32k">
+                    <div class="model-info">
+                        <div class="model-name">豆包Pro 32K</div>
+                        <div class="model-desc">适合日常对话和投资分析，性价比高</div>
+                    </div>
+                    <div class="model-badge">推荐</div>
+                </div>
+                <div class="model-item" data-model="doubao-pro-128k">
+                    <div class="model-info">
+                        <div class="model-name">豆包Pro 128K</div>
+                        <div class="model-desc">超长上下文，可分析年报、财报等长文档</div>
+                    </div>
+                </div>
+                <div class="model-item" data-model="doubao-thinking-pro">
+                    <div class="model-info">
+                        <div class="model-name">豆包思考Pro</div>
+                        <div class="model-desc">深度推理能力，适合复杂投资策略分析</div>
                     </div>
                 </div>
             </div>

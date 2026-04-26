@@ -79,11 +79,90 @@ function getUserData(userId) {
     return null;
 }
 
+function saveChatHistory(userId, messages, assistantMessage, model) {
+    const user = users.find(u => u.id === userId);
+    if (user) {
+        if (!user.chatHistory) {
+            user.chatHistory = [];
+        }
+        
+        const userMessages = messages.filter(m => m.role === 'user');
+        const lastUserMessage = userMessages[userMessages.length - 1];
+        
+        const chatRecord = {
+            id: `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            userMessage: lastUserMessage ? lastUserMessage.content : '',
+            assistantMessage: assistantMessage.content,
+            model: model,
+            stockCodes: extractStockCodes(lastUserMessage ? lastUserMessage.content : ''),
+            createdAt: new Date().toISOString()
+        };
+        
+        user.chatHistory.push(chatRecord);
+        user.updated_at = new Date().toISOString();
+        saveDB();
+        return chatRecord.id;
+    }
+    return null;
+}
+
+function extractStockCodes(text) {
+    if (!text) return [];
+    const patterns = [
+        /\b(60\d{3}|00\d{3}|30\d{3}|688\d{3})\b/g,
+        /\b[A-Z]{1,5}\b/g,
+    ];
+    
+    const codes = [];
+    for (const pattern of patterns) {
+        const matches = text.match(pattern);
+        if (matches) {
+            codes.push(...matches);
+        }
+    }
+    return [...new Set(codes)];
+}
+
+function getChatHistory(userId, stockCode = null) {
+    const user = users.find(u => u.id === userId);
+    if (!user || !user.chatHistory) {
+        return [];
+    }
+    
+    let history = user.chatHistory;
+    
+    if (stockCode) {
+        history = history.filter(chat => {
+            if (!chat.stockCodes || chat.stockCodes.length === 0) {
+                return chat.userMessage.toLowerCase().includes(stockCode.toLowerCase());
+            }
+            return chat.stockCodes.some(code => 
+                code.toLowerCase() === stockCode.toLowerCase() ||
+                chat.userMessage.toLowerCase().includes(code.toLowerCase())
+            );
+        });
+    }
+    
+    return history.reverse().slice(0, 50);
+}
+
+function deleteChatHistory(userId, chatId) {
+    const user = users.find(u => u.id === userId);
+    if (user && user.chatHistory) {
+        user.chatHistory = user.chatHistory.filter(chat => chat.id !== chatId);
+        user.updated_at = new Date().toISOString();
+        saveDB();
+    }
+}
+
 module.exports = {
     initDB,
     getUserByEmail,
     createUser,
     updateUserWatchlist,
     updateUserPortfolio,
-    getUserData
+    getUserData,
+    saveChatHistory,
+    getChatHistory,
+    deleteChatHistory
 };

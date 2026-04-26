@@ -10,6 +10,8 @@ const db = require('./db');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'aitrader-secret-key-2024';
 const JWT_EXPIRES_IN = '7d';
+const DOUBAN_API_KEY = process.env.DOUBAN_API_KEY || 'ark-a3f277dd-bbb0-46f5-b62c-f2ce652ae309-183ff';
+const DOUBAN_API_BASE = 'https://ark.cn-beijing.volces.com/api/v3';
 
 const port = process.env.PORT || 8080;
 const publicDir = path.join(__dirname);
@@ -400,6 +402,166 @@ function handleUserRequest(req, res) {
     }
 }
 
+async function handleChatRequest(req, res) {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    if (req.method === 'OPTIONS') {
+        res.writeHead(200);
+        res.end();
+        return;
+    }
+
+    const token = getTokenFromHeader(req);
+    if (!token) {
+        res.writeHead(401);
+        res.end(JSON.stringify({ error: '请先登录' }));
+        return;
+    }
+
+    const decoded = verifyToken(token);
+    if (!decoded) {
+        res.writeHead(401);
+        res.end(JSON.stringify({ error: 'Token无效或已过期' }));
+        return;
+    }
+
+    if (req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', async () => {
+            try {
+                const { messages, model } = JSON.parse(body);
+                
+                if (!messages || !Array.isArray(messages) || messages.length === 0) {
+                    res.writeHead(400);
+                    res.end(JSON.stringify({ error: '消息格式错误' }));
+                    return;
+                }
+
+                const selectedModel = model || 'doubao-pro-32k';
+                
+                const response = await fetch(`${DOUBAN_API_BASE}/chat/completions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${DOUBAN_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: selectedModel,
+                        messages: messages,
+                        stream: false
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('[Doubao API Error]', response.status, errorText);
+                    res.writeHead(502);
+                    res.end(JSON.stringify({ error: 'AI服务请求失败', details: errorText }));
+                    return;
+                }
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    res.writeHead(400);
+                    res.end(JSON.stringify({ error: data.error.message || 'AI服务错误' }));
+                    return;
+                }
+
+                const assistantMessage = data.choices[0].message;
+                
+                const userId = decoded.id;
+                db.saveChatHistory(userId, messages, assistantMessage, selectedModel);
+
+                res.writeHead(200);
+                res.end(JSON.stringify({
+                    message: assistantMessage.content,
+                    usage: data.usage,
+                    model: selectedModel,
+                    id: data.id
+                }));
+            } catch (err) {
+                console.error('[Chat Error]', err);
+                res.writeHead(500);
+                res.end(JSON.stringify({ error: '处理失败: ' + err.message }));
+            }
+        });
+    } else {
+        res.writeHead(405);
+        res.end(JSON.stringify({ error: '不支持的请求方法' }));
+    }
+}
+
+function handleChatHistoryRequest(req, res) {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    if (req.method === 'OPTIONS') {
+        res.writeHead(200);
+        res.end();
+        return;
+    }
+
+    const token = getTokenFromHeader(req);
+    if (!token) {
+        res.writeHead(401);
+        res.end(JSON.stringify({ error: '请先登录' }));
+        return;
+    }
+
+    const decoded = verifyToken(token);
+    if (!decoded) {
+        res.writeHead(401);
+        res.end(JSON.stringify({ error: 'Token无效或已过期' }));
+        return;
+    }
+
+    if (req.url.startsWith('/api/ai/history') && req.method === 'GET') {
+        try {
+            const stockCode = new URL(req.url, 'http://localhost').searchParams.get('stockCode');
+            const history = db.getChatHistory(decoded.id, stockCode);
+            res.writeHead(200);
+            res.end(JSON.stringify({ history }));
+        } catch (err) {
+            res.writeHead(500);
+            res.end(JSON.stringify({ error: '获取历史记录失败' }));
+        }
+    } else if (req.url.startsWith('/api/ai/history/') && req.method === 'DELETE') {
+        const chatId = req.url.split('/').pop();
+        try {
+            db.deleteChatHistory(decoded.id, chatId);
+            res.writeHead(200);
+            res.end(JSON.stringify({ message: '删除成功' }));
+        } catch (err) {
+            res.writeHead(500);
+            res.end(JSON.stringify({ error: '删除失败' }));
+        }
+    } else {
+        res.writeHead(404);
+        res.end(JSON.stringify({ error: 'Not found' }));
+    }
+}
+
+function handleChatModelsRequest(req, res) {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    const models = [
+        { id: 'doubao-pro-32k', name: '豆包Pro 32K', description: '适合日常对话和投资分析，性价比高', contextWindow: 32000 },
+        { id: 'doubao-pro-128k', name: '豆包Pro 128K', description: '超长上下文，可分析年报、财报等长文档', contextWindow: 128000 },
+        { id: 'doubao-thinking-pro', name: '豆包思考Pro', description: '深度推理能力，适合复杂投资策略分析', contextWindow: 32000 }
+    ];
+
+    res.writeHead(200);
+    res.end(JSON.stringify({ models }));
+}
+
 const server = http.createServer((req, res) => {
     console.log('[Server] Request:', req.method, req.url);
     
@@ -431,6 +593,21 @@ const server = http.createServer((req, res) => {
 
     if (req.url.startsWith('/api/user/')) {
         handleUserRequest(req, res);
+        return;
+    }
+
+    if (req.url.startsWith('/api/ai/chat')) {
+        handleChatRequest(req, res);
+        return;
+    }
+
+    if (req.url.startsWith('/api/ai/history')) {
+        handleChatHistoryRequest(req, res);
+        return;
+    }
+
+    if (req.url === '/api/ai/models') {
+        handleChatModelsRequest(req, res);
         return;
     }
 

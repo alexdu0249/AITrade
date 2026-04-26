@@ -16,16 +16,19 @@ class AITraderApp {
         this.newsInitialized = false;
         this.newsObserver = null;
         this.currentChartRange = '1d';
-        
+
         this.homeNewsPage = 1;
         this.homeNewsPageSize = 10;
         this.homeNewsLoading = false;
         this.homeNewsHasMore = true;
         this.homeNewsObserver = null;
-        
+
         this.token = localStorage.getItem('token') || null;
         this.currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
-        
+
+        this.aiConversationHistory = [];
+        this.selectedAiModel = localStorage.getItem('selectedAiModel') || 'doubao-pro-32k';
+
         this.init();
         this.registerSW();
     }
@@ -183,6 +186,187 @@ class AITraderApp {
         document.getElementById('registerPasswordConfirm').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.handleRegister();
         });
+
+        document.getElementById('aiChatBtn').addEventListener('click', () => this.toggleAiChat());
+        document.getElementById('closeAiChat').addEventListener('click', () => this.hideAiChat());
+        document.getElementById('newChatBtn').addEventListener('click', () => this.newAiChat());
+        document.getElementById('aiSendBtn').addEventListener('click', () => this.sendAiMessage());
+        document.getElementById('aiInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                this.sendAiMessage();
+            }
+        });
+        document.getElementById('aiInput').addEventListener('input', (e) => {
+            this.autoResizeTextarea(e.target);
+            this.updateTokenCount();
+        });
+
+        document.querySelectorAll('.suggestion-chip').forEach(chip => {
+            chip.addEventListener('click', (e) => {
+                const prompt = e.target.dataset.prompt;
+                document.getElementById('aiInput').value = prompt;
+                this.sendAiMessage();
+            });
+        });
+
+        document.getElementById('switchModelBtn').addEventListener('click', () => this.showModelSelector());
+        document.getElementById('closeModelSelector').addEventListener('click', () => this.hideModelSelector());
+
+        document.querySelectorAll('.model-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const model = e.currentTarget.dataset.model;
+                this.selectAiModel(model);
+            });
+        });
+
+        document.querySelectorAll('.news-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => this.switchNewsTab(e.target.dataset.newsTab));
+        });
+    }
+
+    switchNewsTab(tabName) {
+        this.currentNewsTab = tabName;
+        document.querySelectorAll('.news-tab').forEach(t => t.classList.remove('active'));
+        document.querySelector(`[data-news-tab="${tabName}"]`).classList.add('active');
+
+        if (tabName === 'news') {
+            document.getElementById('newsList').hidden = false;
+            document.getElementById('aiNotesList').hidden = true;
+        } else if (tabName === 'ainotes') {
+            document.getElementById('newsList').hidden = true;
+            document.getElementById('aiNotesList').hidden = false;
+            this.loadAiNotesForStock();
+        }
+    }
+
+    async loadAiNotesForStock() {
+        if (!this.currentStock) return;
+
+        const notesList = document.getElementById('aiNotesList');
+        notesList.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><p>加载中...</p></div>';
+
+        const notes = await this.loadAiNotes(this.currentStock.code);
+
+        if (notes.length === 0) {
+            notesList.innerHTML = `
+                <div class="empty-state">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <p>暂无AI笔记</p>
+                    <p class="empty-hint">与AI讨论此股票后，对话将自动保存</p>
+                </div>
+            `;
+            return;
+        }
+
+        notesList.innerHTML = notes.map(note => `
+            <div class="note-item" data-id="${note.id}">
+                <div class="note-question">${this.escapeHtml(note.userMessage)}</div>
+                <div class="note-time">${this.formatTime(note.createdAt)}</div>
+            </div>
+        `).join('');
+
+        notesList.querySelectorAll('.note-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const noteId = item.dataset.id;
+                const note = notes.find(n => n.id === noteId);
+                if (note) {
+                    this.showAiNoteDetail(note);
+                }
+            });
+        });
+    }
+
+    showAiNoteDetail(note) {
+        const notesList = document.getElementById('aiNotesList');
+        notesList.innerHTML = `
+            <div class="note-detail">
+                <button class="back-btn" onclick="app.loadAiNotesForStock()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M15 18l-6-6 6-6"/>
+                    </svg>
+                </button>
+                <div class="note-question-full">${this.escapeHtml(note.userMessage)}</div>
+                <div class="note-answer">${this.formatAiResponse(note.assistantMessage)}</div>
+                <div class="note-actions">
+                    <button class="note-action-btn" onclick="app.loadAiNotesForStock()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M15 18l-6-6 6-6"/>
+                        </svg>
+                        返回列表
+                    </button>
+                    <button class="note-action-btn" onclick="app.continueAiConversation('${note.id}')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        继续对话
+                    </button>
+                    <button class="note-action-btn delete" onclick="app.confirmDeleteNote('${note.id}')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                        删除
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    async confirmDeleteNote(noteId) {
+        if (confirm('确定要删除这条笔记吗？')) {
+            await this.deleteAiNote(noteId);
+            this.loadAiNotesForStock();
+            this.showToast('笔记已删除');
+        }
+    }
+
+    continueAiConversation(noteId) {
+        if (!this.token) {
+            this.showToast('请先登录');
+            this.showAuthModal();
+            return;
+        }
+
+        fetch(`/api/ai/history?stockCode=${encodeURIComponent(this.currentStock.code)}`, {
+            headers: { 'Authorization': `Bearer ${this.token}` }
+        })
+        .then(res => res.json())
+        .then(data => {
+            const note = data.history.find(n => n.id === noteId);
+            if (note) {
+                this.aiConversationHistory = [
+                    { role: 'user', content: note.userMessage },
+                    { role: 'assistant', content: note.assistantMessage }
+                ];
+
+                this.hideStockDetail();
+                this.showAiChat();
+
+                document.getElementById('aiInput').value = note.userMessage;
+            }
+        });
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    formatTime(isoString) {
+        const date = new Date(isoString);
+        const now = new Date();
+        const diff = now - date;
+
+        if (diff < 60000) return '刚刚';
+        if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
+        if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
+        if (diff < 604800000) return Math.floor(diff / 86400000) + '天前';
+
+        return date.toLocaleDateString('zh-CN');
     }
 
     setupNewsObserver() {
@@ -1932,6 +2116,229 @@ class AITraderApp {
             });
         } catch (err) {
             console.error('保存用户数据失败:', err);
+        }
+    }
+
+    toggleAiChat() {
+        const panel = document.getElementById('aiChatPanel');
+        if (panel.classList.contains('active')) {
+            this.hideAiChat();
+        } else {
+            this.showAiChat();
+        }
+    }
+
+    showAiChat() {
+        document.getElementById('aiChatPanel').classList.add('active');
+    }
+
+    hideAiChat() {
+        document.getElementById('aiChatPanel').classList.remove('active');
+    }
+
+    newAiChat() {
+        this.aiMessages = [];
+        this.aiConversationHistory = [];
+        this.renderAiWelcome();
+    }
+
+    renderAiWelcome() {
+        const container = document.getElementById('aiMessages');
+        container.innerHTML = `
+            <div class="ai-welcome">
+                <div class="welcome-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                </div>
+                <h3>您好，我是AI投资助手</h3>
+                <p>我可以帮您分析股票、解读财报、制定投资策略</p>
+                <div class="suggestion-chips">
+                    <button class="suggestion-chip" data-prompt="帮我分析贵州茅台的财务状况和投资价值">分析贵州茅台</button>
+                    <button class="suggestion-chip" data-prompt="解释什么是市盈率(PE)和市净率(PB)">什么是PE和PB</button>
+                    <button class="suggestion-chip" data-prompt="帮我比较苹果公司和微软公司的投资价值">比较苹果和微软</button>
+                    <button class="suggestion-chip" data-prompt="分析当前A股市场的走势和热点板块">分析A股市场</button>
+                </div>
+            </div>
+        `;
+
+        document.querySelectorAll('.suggestion-chip').forEach(chip => {
+            chip.addEventListener('click', (e) => {
+                const prompt = e.target.dataset.prompt;
+                document.getElementById('aiInput').value = prompt;
+                this.sendAiMessage();
+            });
+        });
+    }
+
+    async sendAiMessage() {
+        if (!this.token) {
+            this.showToast('请先登录');
+            this.showAuthModal();
+            return;
+        }
+
+        const input = document.getElementById('aiInput');
+        const message = input.value.trim();
+
+        if (!message) return;
+
+        input.value = '';
+        this.autoResizeTextarea(input);
+        this.updateTokenCount();
+
+        this.addAiMessage(message, 'user');
+        this.aiConversationHistory.push({ role: 'user', content: message });
+
+        this.showAiTyping();
+
+        try {
+            const response = await fetch('/api/ai/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.token}`
+                },
+                body: JSON.stringify({
+                    messages: this.aiConversationHistory,
+                    model: this.selectedAiModel || 'doubao-pro-32k'
+                })
+            });
+
+            this.hideAiTyping();
+
+            if (response.ok) {
+                const data = await response.json();
+                this.addAiMessage(data.message, 'assistant');
+                this.aiConversationHistory.push({ role: 'assistant', content: data.message });
+            } else {
+                const error = await response.json();
+                this.addAiMessage(`抱歉，发生了错误: ${error.error || '未知错误'}`, 'assistant');
+            }
+        } catch (err) {
+            this.hideAiTyping();
+            this.addAiMessage(`请求失败: ${err.message}`, 'assistant');
+        }
+    }
+
+    addAiMessage(content, role) {
+        const container = document.getElementById('aiMessages');
+        const welcome = container.querySelector('.ai-welcome');
+        if (welcome) {
+            welcome.remove();
+        }
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `ai-message ${role}`;
+
+        let formattedContent = this.formatAiResponse(content);
+
+        messageDiv.innerHTML = `<div class="message-bubble">${formattedContent}</div>`;
+        container.appendChild(messageDiv);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    formatAiResponse(content) {
+        let formatted = content
+            .replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+            .replace(/`([^`]+)`/g, '<code>$1</code>')
+            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+            .replace(/\n/g, '<br>');
+
+        return formatted;
+    }
+
+    showAiTyping() {
+        const container = document.getElementById('aiMessages');
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'ai-message assistant';
+        typingDiv.id = 'aiTyping';
+        typingDiv.innerHTML = `
+            <div class="ai-typing">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+        `;
+        container.appendChild(typingDiv);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    hideAiTyping() {
+        const typing = document.getElementById('aiTyping');
+        if (typing) {
+            typing.remove();
+        }
+    }
+
+    autoResizeTextarea(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.min(textarea.scrollHeight, 100) + 'px';
+    }
+
+    updateTokenCount() {
+        const input = document.getElementById('aiInput');
+        const tokenCount = document.getElementById('tokenCount');
+        const text = input.value;
+        const tokens = Math.ceil(text.length / 4);
+        tokenCount.textContent = Math.min(tokens, 32000);
+    }
+
+    showModelSelector() {
+        document.getElementById('modelSelector').hidden = false;
+        const selectedModel = this.selectedAiModel || 'doubao-pro-32k';
+        document.querySelectorAll('.model-item').forEach(item => {
+            item.classList.toggle('selected', item.dataset.model === selectedModel);
+        });
+    }
+
+    hideModelSelector() {
+        document.getElementById('modelSelector').hidden = true;
+    }
+
+    selectAiModel(model) {
+        this.selectedAiModel = model;
+        localStorage.setItem('selectedAiModel', model);
+        const modelNames = {
+            'doubao-pro-32k': '豆包Pro 32K',
+            'doubao-pro-128k': '豆包Pro 128K',
+            'doubao-thinking-pro': '豆包思考Pro'
+        };
+        document.getElementById('currentModel').textContent = modelNames[model] || model;
+        this.hideModelSelector();
+        this.showToast(`已切换到${modelNames[model]}`);
+    }
+
+    async loadAiNotes(stockCode) {
+        if (!this.token) return [];
+
+        try {
+            const response = await fetch(`/api/ai/history?stockCode=${encodeURIComponent(stockCode)}`, {
+                headers: { 'Authorization': `Bearer ${this.token}` }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                return data.history || [];
+            }
+        } catch (err) {
+            console.error('加载AI笔记失败:', err);
+        }
+        return [];
+    }
+
+    async deleteAiNote(chatId) {
+        if (!this.token) return;
+
+        try {
+            await fetch(`/api/ai/history/${chatId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${this.token}` }
+            });
+        } catch (err) {
+            console.error('删除AI笔记失败:', err);
         }
     }
 }
