@@ -1,0 +1,23 @@
+{
+  "name": "aitrader",
+  "version": "1.0.0",
+  "description": "AITrader - 智能股票交易助手，支持美股、A股行情追踪",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "stock",
+    "trading",
+    "PWA",
+    "finance"
+  ],
+  "author": "AITrader",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "iconv-lite": "^0.7.2",
+    "jsonwebtoken": "^9.0.3"
+  }
+}

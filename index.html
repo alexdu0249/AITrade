@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#f2f2f7">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="AITrader">
+    <title>AITrader</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="styles.css?v=7">
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="app-title-section">
+                <img src="logo.png" alt="Logo" class="app-logo">
+            </div>
+            <div class="header-actions">
+                <button class="header-btn" id="refreshBtn" aria-label="刷新">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M23 4v6h-6M1 20v-6h6"/>
+                        <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="home">首页</button>
+            <button class="tab-btn" data-tab="watchlist">自选</button>
+            <button class="tab-btn" data-tab="portfolio">持仓</button>
+            <button class="tab-btn" data-tab="markets">市场</button>
+        </nav>
+
+        <main class="tab-content">
+            <div class="tab-pane active" id="home">
+                <div class="index-section">
+                    <div class="section-title">市场指数</div>
+                    <div class="index-cards" id="indexCards">
+                        <div class="loading-state">
+                            <div class="loading-spinner"></div>
+                            <p>加载中...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="news-section">
+                    <div class="section-title">财经资讯</div>
+                    <div class="news-list" id="homeNewsList">
+                        <div class="loading-state">
+                            <div class="loading-spinner"></div>
+                            <p>加载中...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane" id="watchlist">
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="搜索股票名称或代码..." class="search-input">
+                    <button class="add-btn" id="addBtn">+</button>
+                    <button class="scan-btn" id="scanBtn" aria-label="扫图添加">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                            <circle cx="12" cy="13" r="4"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="filter-tabs">
+                    <button class="filter-tab active" data-filter="all">全部</button>
+                    <button class="filter-tab" data-filter="us">美股</button>
+                    <button class="filter-tab" data-filter="cn">A股</button>
+                </div>
+                <div class="stock-list" id="watchlistList">
+                    <div class="empty-state">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M12 5v14M5 12h14"/>
+                        </svg>
+                        <p>点击 + 添加自选股</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane" id="portfolio">
+                <div class="portfolio-summary">
+                    <div class="summary-card">
+                        <span class="label">总资产</span>
+                        <span class="value" id="totalValue">¥0.00</span>
+                    </div>
+                    <div class="summary-card">
+                        <span class="label">总盈亏</span>
+                        <span class="value" id="totalProfit">¥0.00</span>
+                    </div>
+                </div>
+                <div class="filter-tabs">
+                    <button class="filter-tab active" data-filter="all">全部</button>
+                    <button class="filter-tab" data-filter="us">美股</button>
+                    <button class="filter-tab" data-filter="cn">A股</button>
+                </div>
+                <div class="stock-list" id="portfolioList">
+                    <div class="empty-state">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <rect x="2" y="7" width="20" height="14" rx="2"/>
+                            <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
+                        </svg>
+                        <p>暂无持仓</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane" id="markets">
+                <div class="market-tabs">
+                    <button class="market-tab active" data-market="us">美股</button>
+                    <button class="market-tab" data-market="cn">A股</button>
+                </div>
+                <div class="market-content">
+                    <div class="market-pane active" id="market-us">
+                        <div class="stock-list" id="usMarketList">
+                            <div class="loading-state">
+                                <div class="loading-spinner"></div>
+                                <p>加载中...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="market-pane" id="market-cn">
+                        <div class="stock-list" id="cnMarketList">
+                            <div class="loading-state">
+                                <div class="loading-spinner"></div>
+                                <p>加载中...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div class="modal" id="addModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>添加股票</h2>
+                    <button class="close-btn" id="closeModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group">
+                        <label>股票代码或名称</label>
+                        <input type="text" id="stockCode" placeholder="例如: 600519, AAPL, 贵州茅台">
+                    </div>
+                    <button class="submit-btn" id="submitAdd">添加</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal" id="portfolioModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>添加持仓</h2>
+                    <button class="close-btn" id="closePortfolioModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group">
+                        <label>股票代码</label>
+                        <input type="text" id="portfolioStockCode" placeholder="选择已添加的股票">
+                    </div>
+                    <div class="input-group">
+                        <label>持仓数量</label>
+                        <input type="number" id="portfolioQuantity" placeholder="0" step="0.01">
+                    </div>
+                    <div class="input-group">
+                        <label>成本价</label>
+                        <input type="number" id="portfolioCost" placeholder="0.00" step="0.01">
+                    </div>
+                    <button class="submit-btn" id="submitPortfolio">添加持仓</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal" id="scanModal">
+            <div class="modal-content scan-modal">
+                <div class="modal-header">
+                    <h2>扫图添加股票</h2>
+                    <button class="close-btn" id="closeScanModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="scan-upload-area" id="scanUploadArea">
+                        <input type="file" id="scanFileInput" accept="image/*" hidden>
+                        <div class="upload-placeholder" id="uploadPlaceholder">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                                <circle cx="12" cy="13" r="4"/>
+                            </svg>
+                            <p>点击上传股票截图</p>
+                            <span class="upload-hint">支持JPG、PNG格式</span>
+                        </div>
+                        <img id="scanPreview" class="scan-preview" hidden>
+                    </div>
+                    <div class="scan-result" id="scanResult" hidden>
+                        <div class="result-header">
+                            <h3>识别结果</h3>
+                            <span class="result-count" id="resultCount"></span>
+                        </div>
+                        <div class="result-list" id="resultList"></div>
+                        <button class="submit-btn" id="submitScan" disabled>批量添加</button>
+                    </div>
+                    <div class="scan-loading" id="scanLoading" hidden>
+                        <div class="loading-spinner"></div>
+                        <p>正在识别图片中的股票信息...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="toast" id="toast"></div>
+
+        <div class="modal" id="authModal">
+            <div class="modal-content auth-modal">
+                <div class="modal-header">
+                    <h2 id="authTitle">登录</h2>
+                    <button class="close-btn" id="closeAuthModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="auth-tabs">
+                        <button class="auth-tab active" data-auth="login">登录</button>
+                        <button class="auth-tab" data-auth="register">注册</button>
+                    </div>
+                    <div class="auth-form" id="loginForm">
+                        <div class="input-group">
+                            <label>邮箱</label>
+                            <input type="email" id="loginEmail" placeholder="请输入邮箱">
+                        </div>
+                        <div class="input-group">
+                            <label>密码</label>
+                            <input type="password" id="loginPassword" placeholder="请输入密码">
+                        </div>
+                        <button class="submit-btn" id="submitLogin">登录</button>
+                    </div>
+                    <div class="auth-form" id="registerForm" hidden>
+                        <div class="input-group">
+                            <label>昵称</label>
+                            <input type="text" id="registerName" placeholder="请输入昵称（可选）">
+                        </div>
+                        <div class="input-group">
+                            <label>邮箱</label>
+                            <input type="email" id="registerEmail" placeholder="请输入邮箱">
+                        </div>
+                        <div class="input-group">
+                            <label>密码</label>
+                            <input type="password" id="registerPassword" placeholder="请输入密码（至少6位）">
+                        </div>
+                        <div class="input-group">
+                            <label>确认密码</label>
+                            <input type="password" id="registerPasswordConfirm" placeholder="请再次输入密码">
+                        </div>
+                        <button class="submit-btn" id="submitRegister">注册</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="stock-detail" id="stockDetail">
+        <div class="detail-header">
+            <button class="back-btn" id="backBtn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 18l-6-6 6-6"/>
+                </svg>
+            </button>
+            <div class="detail-title">
+                <div class="name" id="detailName">--</div>
+                <div class="code" id="detailCode">--</div>
+            </div>
+        </div>
+
+        <div class="price-section">
+            <div class="current-price" id="detailPrice">--</div>
+            <div class="price-info">
+                <span class="change-badge" id="detailChange">--</span>
+                <span class="previous-close" id="detailPrevClose">昨收: --</span>
+            </div>
+        </div>
+
+        <div class="chart-section">
+            <div class="chart-header">
+                <span class="chart-title">价格走势</span>
+                <div class="chart-tabs">
+                    <button class="chart-tab active" data-range="1d">1天</button>
+                    <button class="chart-tab" data-range="1w">1周</button>
+                    <button class="chart-tab" data-range="1m">1月</button>
+                    <button class="chart-tab" data-range="3m">3月</button>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="priceChart"></canvas>
+            </div>
+        </div>
+
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-item">
+                <div class="label">今开</div>
+                <div class="value" id="statOpen">--</div>
+            </div>
+            <div class="stat-item">
+                <div class="label">最高</div>
+                <div class="value" id="statHigh">--</div>
+            </div>
+            <div class="stat-item">
+                <div class="label">最低</div>
+                <div class="value" id="statLow">--</div>
+            </div>
+            <div class="stat-item">
+                <div class="label">成交量</div>
+                <div class="value" id="statVolume">--</div>
+            </div>
+        </div>
+
+        <div class="news-section">
+            <div class="news-header">
+                <div class="news-tabs">
+                    <button class="news-tab active" data-news-tab="news">相关资讯</button>
+                    <button class="news-tab" data-news-tab="ainotes">AI笔记</button>
+                </div>
+            </div>
+            <div class="news-list" id="newsList">
+                <div class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>加载资讯中...</p>
+                </div>
+            </div>
+            <div class="news-list" id="aiNotesList" hidden>
+                <div class="empty-state">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                    </svg>
+                    <p>暂无AI笔记</p>
+                    <p class="empty-hint">与AI讨论此股票后，对话将自动保存</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="news-detail" id="newsDetail">
+        <div class="detail-header">
+            <button class="back-btn" id="newsBackBtn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 18l-6-6 6-6"/>
+                </svg>
+            </button>
+            <div class="detail-title">
+                <div class="name" id="newsDetailTitle">--</div>
+            </div>
+        </div>
+        <div class="news-meta-bar">
+            <span class="source" id="newsDetailSource">--</span>
+            <span class="time" id="newsDetailTime">--</span>
+        </div>
+        <div class="news-content" id="newsDetailContent">
+            <div class="loading-state">
+                <div class="loading-spinner"></div>
+                <p>加载中...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="news-detail" id="aiNoteDetail">
+        <div class="detail-header">
+            <button class="back-btn" id="aiNoteBackBtn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 18l-6-6 6-6"/>
+                </svg>
+            </button>
+            <div class="detail-title">
+                <div class="name" id="aiNoteDetailTitle">--</div>
+            </div>
+        </div>
+        <div class="news-meta-bar">
+            <span class="source" id="aiNoteDetailDate">--</span>
+        </div>
+        <div class="news-content" id="aiNoteDetailContent">
+        </div>
+    </div>
+
+    <script src="app.js?v=7"></script>
+</body>
+</html>
